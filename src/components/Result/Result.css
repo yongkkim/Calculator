@@ -1,0 +1,8 @@
+.result {
+  display: flex;
+  height: 55px;
+  color: white;
+  justify-content: flex-end;
+  align-items: center;
+  margin-right: 5px;
+}

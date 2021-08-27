@@ -1,0 +1,9 @@
+.input-data {
+  display: flex;
+  height: 25px;
+  font-size: 10px;
+  margin-right: 5px;
+  align-items: center;
+  justify-content: flex-end;
+  color: #ade8ff;
+}

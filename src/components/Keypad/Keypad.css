@@ -1,0 +1,7 @@
+.keypad {
+  display: flex;
+  flex-wrap: wrap;
+  height: 80%;
+  width: 240px;
+  margin: 0 auto;
+}

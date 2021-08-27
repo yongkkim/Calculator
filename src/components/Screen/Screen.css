@@ -1,0 +1,8 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  width: 238px;
+  height: 80px;
+  background-color: black;
+  align-self: end;
+}
