@@ -10,15 +10,15 @@
   font-weight: bold;
 }
 
-.button:nth-last-child(2) {
-  width: 178px;
+.button:last-child {
+  width: 100%;
 }
 
-.button:not(:last-child):not(:nth-last-child(2)) {
+.button:not(:last-child) {
   border-bottom: 2px solid white;
 }
 
-.button:not(:nth-child(4n)):not(:last-child) {
+.button:not(:nth-child(4n)) {
   border-right: 2px solid white;
 }
 
@@ -29,4 +29,8 @@
 
 .button:hover {
   background-color: white;
+}
+
+.button:last-child:hover {
+  background-color: rgb(221, 221, 221);
 }

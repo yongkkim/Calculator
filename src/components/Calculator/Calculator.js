@@ -4,11 +4,19 @@ import Screen from "../Screen/Screen";
 import Keypad from "../Keypad/Keypad";
 
 const Calculator = () => {
-  const [input, setInput] = useState([]);
+  const [input, setInput] = useState("");
   const [keypadValue, setKeypadValue] = useState("");
   const [sign, setSign] = useState("+");
   const [parentheses, setParentheses] = useState(0);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const inputScreen = document.getElementsByClassName("input-data")[0];
+    if (inputScreen.clientHeight + 1 < inputScreen.scrollHeight) {
+      setInput(input.substring(0, input.length - 1));
+      setError("inputLengthLimit");
+    }
+  }, [input]);
 
   const findNested = (index) => {
     if (input[index] === "sqrt" || input[index] === "e^x") {
@@ -83,70 +91,144 @@ const Calculator = () => {
     return 0;
   };
 
-  const insert = (index, newItem) => {
-    let newArr = [...input.slice(0, index), ...newItem, ...input.slice(index)];
-    console.log([...input.slice(0, index)], [...input.slice(index)]);
-    if (Array.isArray(newItem)) newArr.push(")");
-
-    return newArr;
-  };
-
-  const handleClick = (value) => {
-    setKeypadValue(value);
-    // let isValid = validate(value);
-    let newVal = [...input];
+  const validate = (value) => {
+    let valid = true;
+    const isSqrtOrExp = keypadValue === "sqrt" || keypadValue === "e^x";
+    const isSign = keypadValue === "+|-";
 
     switch (value) {
-      case "clear":
-        setInput("");
-        setKeypadValue("");
-        setParentheses(0);
-        setError("");
-        break;
-      case "(":
-        setParentheses(parentheses + 1);
-        newVal.push(value);
-        setInput(newVal);
-        break;
-      case ")":
-        setParentheses(parentheses - 1);
-        newVal.push(value);
-        setInput(newVal);
-        break;
-      case "e^x":
-      case "sqrt":
-        //if findParentheses() return -1, then that means parentheses are used before one of operator
-        //if return -1, use parenthese for current value of sqrt or e^x
-        //if return an index, find the open bracket or use of other sqrt or e^x and enclose it with parentheses
-        const isSqrtOrExp = keypadValue === "sqrt" || keypadValue === "e^x";
-        const parenthesesIndex = findParentheses();
-
-        if (parenthesesIndex !== -1) {
-          setInput(
-            insert(parenthesesIndex, isSqrtOrExp ? [value, "("] : value)
-          );
-        } else {
-          setInput(
-            insert(isSqrtOrExp ? findNested() : findNumberIndex(), [value, "("])
-          );
+      //
+      case "-":
+      case "*":
+      case "/":
+      case "+":
+        if (keypadValue === "") {
+          setError("operator1");
+          valid = false;
+        } else if (!isSqrtOrExp && keypadValue !== ")") {
+          if (isNaN(Number(keypadValue))) {
+            setError("operator2");
+            valid = false;
+          }
         }
 
         break;
-      case "+|-":
+      //
+      case ")":
+        if (parentheses === 0) {
+          setError("parenth1");
+          valid = false;
+        } else if (input[input.lengt - 1] === "(") {
+          setError("parenth2");
+          valid = false;
+        } else if (
+          ["+", "-", "/", "*"].find((element) => element === keypadValue)
+        ) {
+          setError("parenth4");
+        }
         break;
+      //
+      case "(":
+        if (input.length !== 0 && !isSign && !isNaN(Number(keypadValue))) {
+          setError("parenth3");
+          valid = false;
+        }
+        break;
+      //
+      case "e^x":
+      case "sqrt":
+        if (keypadValue === "") {
+          setError("sqrtExp1");
+          valid = false;
+        }
+        if (parentheses > 0 && findParentheses() === -1) {
+          setError("sqrtExp2");
+          valid = false;
+        }
+        break;
+      //
       case "=":
-        calculate();
+        if (parentheses !== 0) {
+          setError("calculate1");
+          valid = false;
+        }
         break;
+      //
       default:
-        newVal.push(value);
-        setInput(newVal);
+        setError("");
+        break;
     }
+
+    return valid;
   };
 
+  //   const insert = (index, newItem) => {
+  //     let newVal =
+
+  //     return newVal;
+  //   };
+
+  const handleInputValue = (value) => {
+    setKeypadValue(value);
+    let isValid = validate(value);
+    let newVal = input;
+
+    if (isValid) {
+      switch (value) {
+        case "clear":
+          setInput("");
+          setKeypadValue("");
+          setParentheses(0);
+          setError("");
+          break;
+        case "(":
+          setParentheses(parentheses + 1);
+          newVal += value;
+          setInput(newVal);
+          break;
+        case ")":
+          setParentheses(parentheses - 1);
+          newVal += value;
+          setInput(newVal);
+          break;
+        case "e^x":
+        case "sqrt":
+          //if findParentheses() return -1, then that means parentheses are used before one of operator
+          //if return -1, use parenthese for current value of sqrt or e^x
+          //if return an index, find the open bracket or use of other sqrt or e^x and enclose it with parentheses
+          // const isSqrtOrExp = keypadValue === "sqrt" || keypadValue === "e^x";
+          let parenthAdded = value + "(";
+          newVal += parenthAdded;
+          setInput(newVal);
+          break;
+        case "+|-":
+          break;
+        case "=":
+          calculate();
+          break;
+        default:
+          newVal += value;
+          setInput(newVal);
+      }
+    } else {
+      newVal += value;
+      setInput(newVal);
+    }
+  };
   return (
     <div className="calculator">
-      <Screen input={input} error={error} />
-      <Keypad handleClick={handleClick} setSign={setSign} sign={sign} />
+      <Screen
+        input={input}
+        setInput={setInput}
+        handleInputValue={handleInputValue}
+        validate={validate}
+        error={error}
+      />
+      <Keypad
+        handleInputValue={handleInputValue}
+        setSign={setSign}
+        sign={sign}
+      />
     </div>
   );
 };
