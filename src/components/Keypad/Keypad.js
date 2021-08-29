@@ -7,7 +7,7 @@ const Keypad = ({ handleInputValue }) => {
     <div className="keypad">
       <Button handleInputValue={handleInputValue} label="AC" value="clear" />
       <Button handleInputValue={handleInputValue} label="sqrt" value="sqrt" />
-      <Button handleInputValue={handleInputValue} label="e^x" value="e^x" />
+      <Button handleInputValue={handleInputValue} label="x^y" value="x^y" />
       <Button handleInputValue={handleInputValue} label="/" value="/" />
 
       <Button handleInputValue={handleInputValue} label="7" value="7" />

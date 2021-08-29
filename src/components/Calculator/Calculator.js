@@ -6,20 +6,30 @@ import Keypad from "../Keypad/Keypad";
 const Calculator = () => {
   const [input, setInput] = useState("");
   const [keypadValue, setKeypadValue] = useState("");
-  const [sign, setSign] = useState("+");
+  const [sign, setSign] = useState("-");
   const [parentheses, setParentheses] = useState(0);
   const [error, setError] = useState("");
+  const [result, setResult] = useState(0);
+  const [indexCount, setIndexCount] = useState(0);
+
+  //   useEffect(() => {
+  //     return () => {
+  //       setIndexCount(indexCount + 1);
+  //     };
+  //   }, [indexCount]);
 
   useEffect(() => {
     const inputScreen = document.getElementsByClassName("input-data")[0];
     if (inputScreen.clientHeight + 1 < inputScreen.scrollHeight) {
       setInput(input.substring(0, input.length - 1));
       setError("inputLengthLimit");
+    } else {
+      setError("");
     }
   }, [input]);
 
   const findNested = (index) => {
-    if (input[index] === "sqrt" || input[index] === "e^x") {
+    if (input[index] === "sqrt" || input[index] === "x^y") {
       return findNested(index - 1);
     }
 
@@ -57,27 +67,107 @@ const Calculator = () => {
 
   const sqrt = (v1) => {};
 
-  const calculate = (input) => {
-    const inputArr = input.split(" ");
+  const getTotal = (opSet, currentNum) => {
+    console.log(opSet, currentNum);
+    let total = 1;
+    let lastOp = opSet[opSet.length - 1].operation;
+    opSet.forEach((op) => {
+      if (op.operation === "*") total *= op.number;
+      if (op.operation === "/") total /= op.number;
+    });
 
-    // switch (value) {
-    //   case "clear":
-    //     setInput("");
-    //     break;
-    //   case "(":
-    //     setParenthesesOpen(!bracketOpen);
-    //     setInput(newVal);
-    //     break;
-    //   case ")":
-    //     setParenthesesOpen(!bracketOpen);
-    //     setInput(newVal);
-    //     break;
-    //   case "=":
-    //     calculate();
-    //     break;
-    //   default:
-    //     setInput(newVal);
-    // }
+    if (lastOp === "*") total *= currentNum;
+    if (lastOp === "/") total *= currentNum;
+
+    return total;
+  };
+
+  const calculate = (inputString) => {
+    let parenthValue = [];
+    let priority = [];
+    let result = 0;
+    let number = 0;
+    let sign = 1;
+
+    for (let i = 0; i < inputString.length; i++) {
+      let char = inputString.charAt(i);
+      console.log("result = ", result, " and Index = ", i, "char = ", char);
+      setIndexCount(i + 1);
+
+      while (i < inputString.length && !isNaN(Number(char))) {
+        number = 10 * number + Number(char);
+        i++;
+        char = inputString.charAt(i);
+      }
+
+      if (char === "+") {
+        if (priority.length !== 0) {
+          number = getTotal(priority, number);
+          priority = [];
+        }
+
+        console.log("+ number = ", number);
+
+        result += sign * number;
+        number = 0;
+        sign = 1;
+      } else if (char === "-") {
+        if (priority.length !== 0) {
+          number = getTotal(priority, number);
+          priority = [];
+        }
+
+        console.log("- number = ", number);
+
+        result += sign * number;
+        number = 0;
+        sign = 1;
+      } else if (char === "*" || char === "/") {
+        priority.push({ number: number, operation: char });
+
+        console.log("* or / number = ", number);
+        number = 0;
+      } else if (char === "^") {
+      } else if (char === "(") {
+        let part = inputString.substring(i + 1, inputString.length);
+        number = calculate(part);
+
+        if (priority.length !== 0) {
+          number = getTotal(priority, number);
+          priority = [];
+        }
+
+        i = i + part.indexOf(")") + 1;
+        console.log(
+          "( ) number = ",
+          number,
+          ") index = ",
+          Number(part.charAt(")")),
+          " current index = ",
+          i,
+          " part = ",
+          part
+        );
+        result += sign * number;
+        number = 0;
+      } else if (char === ")") {
+        if (priority.length !== 0) {
+          number = getTotal(priority, number);
+          priority = [];
+        }
+
+        console.log(" ) number = ", number);
+        result += sign * number;
+        return result;
+      }
+    }
+    console.log("after for = ", number, priority);
+    if (number != 0 && priority.length !== 0) {
+      number = getTotal(priority, number);
+      result += sign * number;
+    } else if (number != 0) result += sign * number;
+
+    return result;
   };
 
   const findNumberIndex = () => {
@@ -93,49 +183,23 @@ const Calculator = () => {
 
   const validate = (value) => {
     let valid = true;
-    const isSqrtOrExp = keypadValue === "sqrt" || keypadValue === "e^x";
+    const isSqrtOrExp = keypadValue === "sqrt" || keypadValue === "x^y";
     const isSign = keypadValue === "+|-";
 
     switch (value) {
-      //
-      case "-":
-      case "*":
-      case "/":
-      case "+":
-        if (keypadValue === "") {
-          setError("operator1");
-          valid = false;
-        } else if (!isSqrtOrExp && keypadValue !== ")") {
-          if (isNaN(Number(keypadValue))) {
-            setError("operator2");
-            valid = false;
-          }
+      case "0":
+        if (keypadValue === "/") {
+          setError("divideByZero");
         }
-
-        break;
-      //
-      case ")":
-        if (parentheses === 0) {
-          setError("parenth1");
-          valid = false;
-        } else if (input[input.lengt - 1] === "(") {
-          setError("parenth2");
-          valid = false;
-        } else if (
-          ["+", "-", "/", "*"].find((element) => element === keypadValue)
-        ) {
-          setError("parenth4");
-        }
-        break;
       //
       case "(":
         if (input.length !== 0 && !isSign && !isNaN(Number(keypadValue))) {
-          setError("parenth3");
+          setError("parenth1");
           valid = false;
         }
         break;
       //
-      case "e^x":
+      case "x^y":
       case "sqrt":
         if (keypadValue === "") {
           setError("sqrtExp1");
@@ -169,56 +233,97 @@ const Calculator = () => {
   //   };
 
   const handleInputValue = (value) => {
+    // console.log(value);
     setKeypadValue(value);
     let isValid = validate(value);
     let newVal = input;
 
-    if (isValid) {
-      switch (value) {
-        case "clear":
-          setInput("");
-          setKeypadValue("");
-          setParentheses(0);
-          setError("");
-          break;
-        case "(":
-          setParentheses(parentheses + 1);
-          newVal += value;
-          setInput(newVal);
-          break;
-        case ")":
-          setParentheses(parentheses - 1);
-          newVal += value;
-          setInput(newVal);
-          break;
-        case "e^x":
-        case "sqrt":
-          //if findParentheses() return -1, then that means parentheses are used before one of operator
-          //if return -1, use parenthese for current value of sqrt or e^x
-          //if return an index, find the open bracket or use of other sqrt or e^x and enclose it with parentheses
-          // const isSqrtOrExp = keypadValue === "sqrt" || keypadValue === "e^x";
-          let parenthAdded = value + "(";
-          newVal += parenthAdded;
-          setInput(newVal);
-          break;
-        case "+|-":
-          break;
-        case "=":
-          calculate();
-          break;
-        default:
-          newVal += value;
-          setInput(newVal);
-      }
-    } else {
-      newVal += value;
-      setInput(newVal);
+    // if (isValid) {
+    switch (value) {
+      case "-":
+      case "*":
+      case "/":
+      case "+":
+        if (keypadValue === "") {
+          newVal = "0" + value;
+        } else {
+          newVal = input + value;
+        }
+        setInput(newVal);
+        break;
+      case "clear":
+        setInput("");
+        setKeypadValue("");
+        setParentheses(0);
+        setError("");
+        break;
+      case "(":
+        setParentheses(parentheses + 1);
+        newVal += value;
+        setInput(newVal);
+        break;
+      case ")":
+        setParentheses(parentheses - 1);
+
+        if (["+", "-", "/", "*"].find((element) => element === keypadValue)) {
+          newVal = input.substring(0, input.length - 1) + value;
+        } else if (keypadValue === "(") {
+          newVal = input.substring(0, input.length - 1);
+        } else {
+          newVal = input + value;
+        }
+
+        setInput(newVal);
+        break;
+      case "x^y":
+      case "sqrt":
+        let parenthAdded = value + "(";
+        newVal += parenthAdded;
+        setInput(newVal);
+
+        //if findParentheses() return -1, then that means parentheses are used before one of operator
+        //if return -1, use parenthese for current value of sqrt or e^x
+        //if return an index, find the open bracket or use of other sqrt or e^x and enclose it with parentheses
+
+        // const isSqrtOrExp = keypadValue === "sqrt" || keypadValue === "e^x";
+        // const parenthesesIndex = findParentheses();
+
+        // if (parenthesesIndex !== -1) {
+        //   setInput(
+        //     insert(parenthesesIndex, isSqrtOrExp ? [value, "("] : value)
+        //   );
+        // } else {
+        //   setInput(
+        //     insert(isSqrtOrExp ? findNested() : findNumberIndex(), [value, "("])
+        //   );
+        // }
+
+        break;
+      case "+|-":
+        let latestNumber = findNumberIndex();
+        console.log(newVal.substring(0, latestNumber), latestNumber);
+        newVal =
+          newVal.substring(0, latestNumber) +
+          sign +
+          newVal.substring(latestNumber, newVal.length);
+        setSign(sign === "" ? "-" : "");
+        setInput(newVal);
+        break;
+      case "=":
+        setResult(calculate(input));
+        break;
+      default:
+        newVal += value;
+        setInput(newVal);
     }
+    // }
   };
+
   return (
     <div className="calculator">
       <Screen
         input={input}
+        result={result}
         setInput={setInput}
         handleInputValue={handleInputValue}
         validate={validate}

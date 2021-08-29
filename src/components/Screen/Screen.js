@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import InputData from "../InputData/InputData";
 import Result from "../Result/Result";
 
-const Screen = ({ input, setInput, handleInputValue, error }) => {
+const Screen = ({ input, result, setInput, handleInputValue, error }) => {
   return (
     <div className="screen">
       <InputData
@@ -11,7 +11,7 @@ const Screen = ({ input, setInput, handleInputValue, error }) => {
         setInput={setInput}
         handleInputValue={handleInputValue}
       />
-      <Result error={error} />
+      <Result result={result} error={error} />
     </div>
   );
 };

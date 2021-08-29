@@ -23,6 +23,7 @@ const InputData = ({ input, setInput, handleInputValue }) => {
       handleInputValue(newVal.charAt(newVal.length - 1));
       setIsEnter(false);
     } else {
+      handleInputValue("=");
       setIsEnter(false);
     }
   };
