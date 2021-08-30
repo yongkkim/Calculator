@@ -4,15 +4,18 @@ import Screen from "../Screen/Screen";
 import Keypad from "../Keypad/Keypad";
 
 const Calculator = () => {
-  const [input, setInput] = useState("1+2*(3*(4*5+6))-7");
+  //   const [input, setInput] = useState("1+2*(3*(4*5+6))-7");
+  //   const [input, setInput] = useState("1+2*(3*(4*(2)^(1/2)+6*(3)^(-2)))-7");
   //   const [input, setInput] = useState("1+2*(3+4*(1+2)+1+(3+9/3))*(2+4/2)");
   //   const [input, setInput] = useState("1+2*3/4-5+6*7/8+9-10");
+  const [input, setInput] = useState("");
   const [keypadValue, setKeypadValue] = useState("");
   const [sign, setSign] = useState("-");
   const [parentheses, setParentheses] = useState(0);
   const [error, setError] = useState("");
   const [result, setResult] = useState(0);
   const [openParenthCount, setOpenParenthCount] = useState(0);
+  const [WTIPrice, setWTIPrice] = useState(0);
 
   useEffect(() => {
     const inputScreen = document.getElementsByClassName("input-data")[0];
@@ -33,10 +36,8 @@ const Calculator = () => {
   };
 
   const findParentheses = () => {
-    //if there is close bracket at the end of array, then find first open bracket
-    //if there is no close bracket at the end, return -1;
-
-    if (keypadValue) return -1;
+    //searches backward, from ) to matching (
+    //if there is close parenthese at the end of array, then find first open parenthese
 
     let closeParentheseCount = 1;
     let openParenthese;
@@ -63,6 +64,22 @@ const Calculator = () => {
 
   const sqrt = (v1) => {};
 
+  const getWTI = () => {
+    let url = "https://api.oilpriceapi.com/v1/prices/latest?by_code=WTI_USD";
+    const headers = {
+      Authorization: "Token 13b7c808e0996823081295a9f7144cba",
+      "Content-Type": "application/json",
+    };
+
+    fetch(url, { headers })
+      .then((response) => response.json())
+      .then((wti) => {
+        const price = wti.data.price;
+        setResult(price);
+        setWTIPrice(price);
+      });
+  };
+
   const getTotal = (opSet, currentNum) => {
     console.log(opSet, currentNum);
     let total = 1;
@@ -75,15 +92,20 @@ const Calculator = () => {
           opSet[i + 1].number = opSet[i].number * opSet[i + 1].number;
         if (opSet[i].operation === "/")
           opSet[i + 1].number = opSet[i].number / opSet[i + 1].number;
+        if (opSet[i].operation === "^")
+          opSet[i + 1].number = Math.pow(opSet[i].number, opSet[i + 1].number);
       }
 
       total = opSet[opSet.length - 1].number;
+      console.log(total);
     } else {
-      total = opSet[0].number;
+      total = lastOp === "^" ? 0 : opSet[0].number;
     }
 
     if (lastOp === "*") total *= currentNum;
     if (lastOp === "/") total /= currentNum;
+    if (lastOp === "^")
+      total += Math.pow(opSet[opSet.length - 1].number, currentNum);
 
     return total;
   };
@@ -109,8 +131,10 @@ const Calculator = () => {
   };
 
   const calculate = (inputString) => {
-    let priority = [];
-    let subResult = 0;
+    let firstPriority = [];
+    let firstSubResult = 0;
+    let secondPriority = [];
+    let secondSubResult = 0;
     let result = 0;
     let number = 0;
     let sign = 1;
@@ -124,63 +148,71 @@ const Calculator = () => {
         char = inputString.charAt(i);
       }
 
-      if (char === "+") {
-        if (priority.length !== 0) {
-          number = getTotal(priority, number);
-          priority = [];
-          subResult = 0;
+      if (["+", "-", ")"].find((element) => element === char)) {
+        if (firstPriority.length !== 0) {
+          number = getTotal(firstPriority, number);
+          firstPriority = [];
+          firstSubResult = 0;
         }
 
+        if (secondPriority.length !== 0) {
+          number = getTotal(secondPriority, number);
+          secondPriority = [];
+          secondSubResult = 0;
+        }
+      }
+
+      if (char === "+") {
         result += sign * number;
         console.log("+ result and number = ", result, number);
         number = 0;
         sign = 1;
       } else if (char === "-") {
-        if (priority.length !== 0) {
-          number = getTotal(priority, number);
-          priority = [];
-          subResult = 0;
-        }
-
         console.log("- result and number = ", result, number);
         result += sign * number;
         number = 0;
         sign = -1;
       } else if (char === "*" || char === "/") {
         if (inputString[i - 1] === ")") {
-          number = subResult;
-          result -= subResult;
+          // After calculation is done in parentheses, if * or / comes,
+          // we don't want to save it to result but do * or / first and save it.
+          number = secondSubResult;
+          result -= secondSubResult;
         }
 
-        priority.push({ number: number, operation: char });
-        console.log("* or / added", number, char);
+        secondPriority.push({ number: number, operation: char });
+        console.log("* or / or ^ added", number, char);
         number = 0;
       } else if (char === "^") {
+        //
+        if (inputString[i - 1] === ")") {
+          number = firstSubResult;
+          result -= firstSubResult;
+        }
+
+        firstPriority.push({ number: number, operation: "^" });
+        console.log("* or / or ^ added", number, char);
+        number = 0;
       } else if (char === "(") {
         console.log("recursion start");
         let part = findParenthPair(i, inputString);
         number = calculate(part);
 
-        if (priority.length !== 0) {
-          number = getTotal(priority, number);
-          priority = [];
-          subResult = 0;
+        if (secondPriority.length !== 0) {
+          number = getTotal(secondPriority, number);
+          secondPriority = [];
+          secondSubResult = 0;
         }
 
         if (!handleOpenParenth(part)) i = i + part.indexOf(")") + 1;
         else i = i + part.lastIndexOf(")") + 1;
 
         console.log("( ) number = ", number, " result = ", result);
-        subResult = number;
+        secondSubResult = number;
         result += sign * number;
         number = 0;
       } else if (char === ")") {
         console.log("recursion end");
-        if (priority.length !== 0) {
-          number = getTotal(priority, number);
-          priority = [];
-          subResult = 0;
-        }
 
         console.log(") result = ", result);
 
@@ -188,13 +220,13 @@ const Calculator = () => {
         return result;
       }
     }
-    console.log("after for loop, = ", number, priority, result);
-    if (number != 0 && priority.length !== 0) {
-      number = getTotal(priority, number);
+    console.log("after for loop, = ", number, secondPriority, result);
+    if (number != 0 && secondPriority.length !== 0) {
+      number = getTotal(secondPriority, number);
       result += sign * number;
     } else if (number != 0) result += sign * number;
 
-    return result;
+    return result === 0 ? "0" : result;
   };
 
   const findNumberIndex = () => {
@@ -207,6 +239,8 @@ const Calculator = () => {
 
     return 0;
   };
+
+  const findZero = () => {};
 
   const validate = (value) => {
     let valid = true;
@@ -246,6 +280,9 @@ const Calculator = () => {
         break;
       //
       default:
+        // if(!isNaN(Number(value))){
+
+        // }
         setError("");
         break;
     }
@@ -253,29 +290,25 @@ const Calculator = () => {
     return valid;
   };
 
-  //   const insert = (index, newItem) => {
-  //     let newVal =
-
-  //     return newVal;
-  //   };
-
   const handleInputValue = (value) => {
     // console.log(value);
     setKeypadValue(value);
-    let isValid = validate(value);
+    // let isValid = validate(value);
     let newVal = input;
 
     // if (isValid) {
     switch (value) {
+      case "wti":
+        getWTI();
+        break;
       case "-":
       case "*":
       case "/":
       case "+":
-        if (keypadValue === "") {
-          newVal = "0" + value;
-        } else {
-          newVal = input + value;
-        }
+        console.log("hello");
+        if (keypadValue === "wti") newVal = WTIPrice + value;
+        else if (keypadValue === "") newVal = "0" + value;
+        else newVal = input + value;
         setInput(newVal);
         break;
       case "clear":
@@ -303,28 +336,47 @@ const Calculator = () => {
 
         setInput(newVal);
         break;
+      case "^":
       case "x^y":
-      case "sqrt":
-        let parenthAdded = value + "(";
-        newVal += parenthAdded;
+        if (keypadValue === "wti") {
+          newVal = "(" + WTIPrice + ")^";
+          setWTIPrice(0);
+        } else if (
+          keypadValue === "" ||
+          isNaN(Number(newVal[newVal.length - 1]))
+        ) {
+          newVal += "(0)^";
+        } else {
+          let digitsStartIndex = findNumberIndex();
+          let digits = newVal.substring(digitsStartIndex, newVal.length);
+          let exp = "(" + digits + ")^";
+          newVal = newVal.substring(0, digitsStartIndex) + exp;
+        }
+
         setInput(newVal);
 
-        //if findParentheses() return -1, then that means parentheses are used before one of operator
-        //if return -1, use parenthese for current value of sqrt or e^x
-        //if return an index, find the open bracket or use of other sqrt or e^x and enclose it with parentheses
+        break;
+      case "sqrt":
+        if (keypadValue === "wti") {
+          newVal = "(" + WTIPrice + "^(1/2))";
+          setWTIPrice(0);
+        } else if (
+          newVal.substring(newVal.length - 6, newVal.length - 1) === "(1/2)"
+        ) {
+          newVal += "^(1/2)";
+        } else if (
+          keypadValue === "" ||
+          isNaN(Number(newVal[newVal.length - 1]))
+        ) {
+          newVal += "(0^(1/2))";
+        } else {
+          let digitsStartIndex = findNumberIndex();
+          let digits = newVal.substring(digitsStartIndex, newVal.length);
+          let sqrt = "(" + digits + "^(1/2))";
+          newVal = newVal.substring(0, digitsStartIndex - 1) + sqrt;
+        }
 
-        // const isSqrtOrExp = keypadValue === "sqrt" || keypadValue === "e^x";
-        // const parenthesesIndex = findParentheses();
-
-        // if (parenthesesIndex !== -1) {
-        //   setInput(
-        //     insert(parenthesesIndex, isSqrtOrExp ? [value, "("] : value)
-        //   );
-        // } else {
-        //   setInput(
-        //     insert(isSqrtOrExp ? findNested() : findNumberIndex(), [value, "("])
-        //   );
-        // }
+        setInput(newVal);
 
         break;
       case "+|-":

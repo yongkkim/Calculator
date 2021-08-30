@@ -10,7 +10,8 @@
   font-weight: bold;
 }
 
-.button:last-child {
+.button:last-child,
+.button:nth-last-child(2) {
   width: 100%;
 }
 

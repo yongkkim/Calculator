@@ -31,6 +31,7 @@ const Keypad = ({ handleInputValue }) => {
       <Button handleInputValue={handleInputValue} label="+|-" value="+|-" />
 
       <Button handleInputValue={handleInputValue} label="=" value="=" />
+      <Button handleInputValue={handleInputValue} label="WTI" value="wti" />
     </div>
   );
 };
