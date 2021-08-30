@@ -4,19 +4,15 @@ import Screen from "../Screen/Screen";
 import Keypad from "../Keypad/Keypad";
 
 const Calculator = () => {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState("1+2*(3*(4*5+6))-7");
+  //   const [input, setInput] = useState("1+2*(3+4*(1+2)+1+(3+9/3))*(2+4/2)");
+  //   const [input, setInput] = useState("1+2*3/4-5+6*7/8+9-10");
   const [keypadValue, setKeypadValue] = useState("");
   const [sign, setSign] = useState("-");
   const [parentheses, setParentheses] = useState(0);
   const [error, setError] = useState("");
   const [result, setResult] = useState(0);
-  const [indexCount, setIndexCount] = useState(0);
-
-  //   useEffect(() => {
-  //     return () => {
-  //       setIndexCount(indexCount + 1);
-  //     };
-  //   }, [indexCount]);
+  const [openParenthCount, setOpenParenthCount] = useState(0);
 
   useEffect(() => {
     const inputScreen = document.getElementsByClassName("input-data")[0];
@@ -71,28 +67,56 @@ const Calculator = () => {
     console.log(opSet, currentNum);
     let total = 1;
     let lastOp = opSet[opSet.length - 1].operation;
-    opSet.forEach((op) => {
-      if (op.operation === "*") total *= op.number;
-      if (op.operation === "/") total /= op.number;
-    });
+
+    if (opSet.length > 1) {
+      for (let i = 0; i < opSet.length - 1; i++) {
+        console.log(opSet[i].number, opSet[i + 1].number);
+        if (opSet[i].operation === "*")
+          opSet[i + 1].number = opSet[i].number * opSet[i + 1].number;
+        if (opSet[i].operation === "/")
+          opSet[i + 1].number = opSet[i].number / opSet[i + 1].number;
+      }
+
+      total = opSet[opSet.length - 1].number;
+    } else {
+      total = opSet[0].number;
+    }
 
     if (lastOp === "*") total *= currentNum;
-    if (lastOp === "/") total *= currentNum;
+    if (lastOp === "/") total /= currentNum;
 
     return total;
   };
 
+  const handleOpenParenth = (inputString) => {
+    for (let input of inputString) {
+      if (input === "(") {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const findParenthPair = (index, inputString) => {
+    let count = 0;
+
+    for (let i = index; i < inputString.length; i++) {
+      if (inputString[i] === "(") count++;
+      if (inputString[i] === ")") count--;
+      if (count === 0) return inputString.substring(index + 1, i + 1);
+    }
+  };
+
   const calculate = (inputString) => {
-    let parenthValue = [];
     let priority = [];
+    let subResult = 0;
     let result = 0;
     let number = 0;
     let sign = 1;
 
     for (let i = 0; i < inputString.length; i++) {
       let char = inputString.charAt(i);
-      console.log("result = ", result, " and Index = ", i, "char = ", char);
-      setIndexCount(i + 1);
 
       while (i < inputString.length && !isNaN(Number(char))) {
         number = 10 * number + Number(char);
@@ -104,64 +128,67 @@ const Calculator = () => {
         if (priority.length !== 0) {
           number = getTotal(priority, number);
           priority = [];
+          subResult = 0;
         }
 
-        console.log("+ number = ", number);
-
         result += sign * number;
+        console.log("+ result and number = ", result, number);
         number = 0;
         sign = 1;
       } else if (char === "-") {
         if (priority.length !== 0) {
           number = getTotal(priority, number);
           priority = [];
+          subResult = 0;
         }
 
-        console.log("- number = ", number);
-
+        console.log("- result and number = ", result, number);
         result += sign * number;
         number = 0;
-        sign = 1;
+        sign = -1;
       } else if (char === "*" || char === "/") {
-        priority.push({ number: number, operation: char });
+        if (inputString[i - 1] === ")") {
+          number = subResult;
+          result -= subResult;
+        }
 
-        console.log("* or / number = ", number);
+        priority.push({ number: number, operation: char });
+        console.log("* or / added", number, char);
         number = 0;
       } else if (char === "^") {
       } else if (char === "(") {
-        let part = inputString.substring(i + 1, inputString.length);
+        console.log("recursion start");
+        let part = findParenthPair(i, inputString);
         number = calculate(part);
 
         if (priority.length !== 0) {
           number = getTotal(priority, number);
           priority = [];
+          subResult = 0;
         }
 
-        i = i + part.indexOf(")") + 1;
-        console.log(
-          "( ) number = ",
-          number,
-          ") index = ",
-          Number(part.charAt(")")),
-          " current index = ",
-          i,
-          " part = ",
-          part
-        );
+        if (!handleOpenParenth(part)) i = i + part.indexOf(")") + 1;
+        else i = i + part.lastIndexOf(")") + 1;
+
+        console.log("( ) number = ", number, " result = ", result);
+        subResult = number;
         result += sign * number;
         number = 0;
       } else if (char === ")") {
+        console.log("recursion end");
         if (priority.length !== 0) {
           number = getTotal(priority, number);
           priority = [];
+          subResult = 0;
         }
 
-        console.log(" ) number = ", number);
+        console.log(") result = ", result);
+
         result += sign * number;
         return result;
       }
     }
-    console.log("after for = ", number, priority);
+    console.log("after for loop, = ", number, priority, result);
     if (number != 0 && priority.length !== 0) {
       number = getTotal(priority, number);
       result += sign * number;
@@ -260,6 +287,7 @@ const Calculator = () => {
       case "(":
         setParentheses(parentheses + 1);
         newVal += value;
+        setOpenParenthCount(openParenthCount + 1);
         setInput(newVal);
         break;
       case ")":
