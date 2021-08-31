@@ -1,8 +1,9 @@
 import "./Keypad.css";
 import React, { useState, useEffect } from "react";
 import Button from "../Button/Button";
+import TestButton from "../Button/TestButton";
 
-const Keypad = ({ handleInputValue }) => {
+const Keypad = ({ handleInputValue, openTest, setOpenTest }) => {
   return (
     <div className="keypad">
       <Button handleInputValue={handleInputValue} label="AC" value="clear" />
@@ -32,6 +33,13 @@ const Keypad = ({ handleInputValue }) => {
 
       <Button handleInputValue={handleInputValue} label="=" value="=" />
       <Button handleInputValue={handleInputValue} label="WTI" value="wti" />
+      <TestButton
+        handleInputValue={handleInputValue}
+        openTest={openTest}
+        setOpenTest={setOpenTest}
+        label="Test"
+        value="test"
+      />
     </div>
   );
 };

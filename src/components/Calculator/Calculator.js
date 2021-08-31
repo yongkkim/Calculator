@@ -2,6 +2,7 @@ import "./Calculator.css";
 import React, { useState, useEffect } from "react";
 import Screen from "../Screen/Screen";
 import Keypad from "../Keypad/Keypad";
+import Test from "../Test/Test";
 
 const Calculator = () => {
   const [input, setInput] = useState("");
@@ -9,9 +10,10 @@ const Calculator = () => {
   const [sign, setSign] = useState("-");
   const [parentheses, setParentheses] = useState(0);
   const [error, setError] = useState("");
-  const [result, setResult] = useState(0);
+  const [result, setResult] = useState("");
   const [openParenthCount, setOpenParenthCount] = useState(0);
   const [WTIPrice, setWTIPrice] = useState(0);
+  const [openTest, setOpenTest] = useState(false);
 
   //it catches if input goes more than 2 lines.
   useEffect(() => {
@@ -418,8 +420,18 @@ const Calculator = () => {
       <Keypad
         handleInputValue={handleInputValue}
         setSign={setSign}
+        openTest={openTest}
+        setOpenTest={setOpenTest}
         sign={sign}
       />
+      {openTest && (
+        <Test
+          calculate={calculate}
+          result={result}
+          openTest={openTest}
+          setOpenTest={setOpenTest}
+        />
+      )}
     </div>
   );
 };

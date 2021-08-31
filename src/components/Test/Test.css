@@ -1,0 +1,14 @@
+.test {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 30%;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  background-color: gray;
+}
+
+.result {
+  display: flex;
+}

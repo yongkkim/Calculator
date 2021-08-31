@@ -1,7 +1,7 @@
 import "./Result.css";
 import React, { useState, useEffect } from "react";
 
-const Screen = ({ result, error }) => {
+const Result = ({ result, error }) => {
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
@@ -31,4 +31,4 @@ const Screen = ({ result, error }) => {
   return <div className="result">{errorMsg ? errorMsg : result}</div>;
 };
 
-export default Screen;
+export default Result;
