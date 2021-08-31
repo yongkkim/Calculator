@@ -6,19 +6,13 @@ const Screen = ({ result, error }) => {
 
   useEffect(() => {
     switch (error) {
-      case "parenth1":
-        setErrorMsg("( must be used after operators");
-        break;
-      case "calculate1":
-        setErrorMsg("No close parenthesis");
-        break;
       case "divideByZero":
         setErrorMsg("cannot be divided by zero");
         break;
-      case "sqrtExp1":
-        setErrorMsg("Cannot be used without values");
+      case "exp1":
+        setErrorMsg("No value for power");
         break;
-      case "sqrtExp2":
+      case "sqrtExp1":
         setErrorMsg("Value is not enclosed by (, ) properly");
         break;
       case "inputLengthLimit":
@@ -34,7 +28,7 @@ const Screen = ({ result, error }) => {
 
   //   };
 
-  return <div className="result">{result ? result : errorMsg}</div>;
+  return <div className="result">{errorMsg ? errorMsg : result}</div>;
 };
 
 export default Screen;

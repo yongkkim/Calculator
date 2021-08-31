@@ -4,10 +4,6 @@ import Screen from "../Screen/Screen";
 import Keypad from "../Keypad/Keypad";
 
 const Calculator = () => {
-  //   const [input, setInput] = useState("1+2*(3*(4*5+6))-7");
-  //   const [input, setInput] = useState("1+2*(3*(4*(2)^(1/2)+6*(3)^(-2)))-7");
-  //   const [input, setInput] = useState("1+2*(3+4*(1+2)+1+(3+9/3))*(2+4/2)");
-  //   const [input, setInput] = useState("1+2*3/4-5+6*7/8+9-10");
   const [input, setInput] = useState("");
   const [keypadValue, setKeypadValue] = useState("");
   const [sign, setSign] = useState("-");
@@ -17,13 +13,12 @@ const Calculator = () => {
   const [openParenthCount, setOpenParenthCount] = useState(0);
   const [WTIPrice, setWTIPrice] = useState(0);
 
+  //it catches if input goes more than 2 lines.
   useEffect(() => {
     const inputScreen = document.getElementsByClassName("input-data")[0];
     if (inputScreen.clientHeight + 1 < inputScreen.scrollHeight) {
       setInput(input.substring(0, input.length - 1));
       setError("inputLengthLimit");
-    } else {
-      setError("");
     }
   }, [input]);
 
@@ -52,18 +47,6 @@ const Calculator = () => {
     return openParenthese;
   };
 
-  const add = (v1, v2) => {};
-
-  const substract = (v1, v2) => {};
-
-  const multiplication = (v1, v2) => {};
-
-  const division = (v1, v2) => {};
-
-  const exponent = (v1) => {};
-
-  const sqrt = (v1) => {};
-
   const getWTI = () => {
     let url = "https://api.oilpriceapi.com/v1/prices/latest?by_code=WTI_USD";
     const headers = {
@@ -81,29 +64,36 @@ const Calculator = () => {
   };
 
   const getTotal = (opSet, currentNum) => {
-    console.log(opSet, currentNum);
     let total = 1;
     let lastOp = opSet[opSet.length - 1].operation;
-
     if (opSet.length > 1) {
       for (let i = 0; i < opSet.length - 1; i++) {
-        console.log(opSet[i].number, opSet[i + 1].number);
         if (opSet[i].operation === "*")
           opSet[i + 1].number = opSet[i].number * opSet[i + 1].number;
-        if (opSet[i].operation === "/")
+        if (opSet[i].operation === "/") {
+          if (opSet[i + 1].number === 0) {
+            setError("divideByZero");
+            return;
+          }
           opSet[i + 1].number = opSet[i].number / opSet[i + 1].number;
+        }
         if (opSet[i].operation === "^")
           opSet[i + 1].number = Math.pow(opSet[i].number, opSet[i + 1].number);
       }
 
       total = opSet[opSet.length - 1].number;
-      console.log(total);
     } else {
       total = lastOp === "^" ? 0 : opSet[0].number;
     }
 
     if (lastOp === "*") total *= currentNum;
-    if (lastOp === "/") total /= currentNum;
+    if (lastOp === "/") {
+      if (currentNum === 0) {
+        setError("divideByZero");
+        return;
+      }
+      total /= currentNum;
+    }
     if (lastOp === "^")
       total += Math.pow(opSet[opSet.length - 1].number, currentNum);
 
@@ -130,9 +120,52 @@ const Calculator = () => {
     }
   };
 
+  const findCloseParenthIndex = (index, inputString) => {
+    let count = 0;
+
+    for (let i = index; i < inputString.length; i++) {
+      if (inputString[i] === "(") count++;
+      if (inputString[i] === ")") count--;
+      if (count === 0) return i;
+    }
+  };
+
+  const findPowerLastIndex = (index, inputString) => {
+    for (let i = index; i < inputString.length - 1; i++) {
+      if (isNaN(Number(inputString[i])) && inputString[i] !== "^") {
+        return i;
+      }
+    }
+
+    return inputString.length - 1;
+  };
+
+  const findPower = (index, inputString) => {
+    let power = index;
+    let nestedPower = 1;
+    for (let i = index; i < inputString.length - 1; i++) {
+      if (inputString[i] === "^") {
+        nestedPower *= findPower(i + 1, inputString);
+        break;
+      }
+      if (inputString[i] === "0" && inputString.substring(i, i + 3) === "0.5") {
+        nestedPower *= 0.5;
+        i = i + 2;
+      } else if (isNaN(Number(inputString[i]) && inputString[i] !== "^")) {
+        return Number(inputString.substring(index, i)) * nestedPower;
+      } else {
+        power++;
+      }
+    }
+
+    return (
+      Number(
+        inputString.substring(index, power === index ? power + 1 : power)
+      ) * nestedPower
+    );
+  };
+
   const calculate = (inputString) => {
-    let firstPriority = [];
-    let firstSubResult = 0;
     let secondPriority = [];
     let secondSubResult = 0;
     let result = 0;
@@ -149,12 +182,6 @@ const Calculator = () => {
       }
 
       if (["+", "-", ")"].find((element) => element === char)) {
-        if (firstPriority.length !== 0) {
-          number = getTotal(firstPriority, number);
-          firstPriority = [];
-          firstSubResult = 0;
-        }
-
         if (secondPriority.length !== 0) {
           number = getTotal(secondPriority, number);
           secondPriority = [];
@@ -164,37 +191,35 @@ const Calculator = () => {
 
       if (char === "+") {
         result += sign * number;
-        console.log("+ result and number = ", result, number);
         number = 0;
         sign = 1;
       } else if (char === "-") {
-        console.log("- result and number = ", result, number);
         result += sign * number;
         number = 0;
         sign = -1;
       } else if (char === "*" || char === "/") {
+        // After calculation is done in parentheses, if * or / comes,
+        // we don't want to save it to result but do * or / first and save it.
         if (inputString[i - 1] === ")") {
-          // After calculation is done in parentheses, if * or / comes,
-          // we don't want to save it to result but do * or / first and save it.
           number = secondSubResult;
           result -= secondSubResult;
         }
 
         secondPriority.push({ number: number, operation: char });
-        console.log("* or / or ^ added", number, char);
         number = 0;
       } else if (char === "^") {
-        //
-        if (inputString[i - 1] === ")") {
-          number = firstSubResult;
-          result -= firstSubResult;
+        if (inputString[i + 1] === "(") {
+          let part = findParenthPair(i + 1, inputString);
+          number = calculate(part);
+          i = findCloseParenthIndex(i + 1, inputString) + 1;
         }
-
-        firstPriority.push({ number: number, operation: "^" });
-        console.log("* or / or ^ added", number, char);
-        number = 0;
+        if (!isNaN(Number(inputString[i + 1]))) {
+          number = Math.pow(number, findPower(i + 1, inputString));
+          i = findPowerLastIndex(i + 1, inputString) + 1;
+        } else {
+          setError("exp1");
+        }
       } else if (char === "(") {
-        console.log("recursion start");
         let part = findParenthPair(i, inputString);
         number = calculate(part);
 
@@ -207,20 +232,14 @@ const Calculator = () => {
         if (!handleOpenParenth(part)) i = i + part.indexOf(")") + 1;
         else i = i + part.lastIndexOf(")") + 1;
 
-        console.log("( ) number = ", number, " result = ", result);
         secondSubResult = number;
         result += sign * number;
         number = 0;
       } else if (char === ")") {
-        console.log("recursion end");
-
-        console.log(") result = ", result);
-
         result += sign * number;
         return result;
       }
     }
-    console.log("after for loop, = ", number, secondPriority, result);
     if (number != 0 && secondPriority.length !== 0) {
       number = getTotal(secondPriority, number);
       result += sign * number;
@@ -244,45 +263,27 @@ const Calculator = () => {
 
   const validate = (value) => {
     let valid = true;
-    const isSqrtOrExp = keypadValue === "sqrt" || keypadValue === "x^y";
-    const isSign = keypadValue === "+|-";
 
     switch (value) {
       case "0":
         if (keypadValue === "/") {
           setError("divideByZero");
         }
-      //
-      case "(":
-        if (input.length !== 0 && !isSign && !isNaN(Number(keypadValue))) {
-          setError("parenth1");
-          valid = false;
-        }
         break;
-      //
       case "x^y":
       case "sqrt":
-        if (keypadValue === "") {
-          setError("sqrtExp1");
-          valid = false;
-        }
         if (parentheses > 0 && findParentheses() === -1) {
-          setError("sqrtExp2");
-          valid = false;
+          setError("sqrtExp1");
         }
         break;
       //
       case "=":
         if (parentheses !== 0) {
           setError("calculate1");
-          valid = false;
         }
         break;
       //
       default:
-        // if(!isNaN(Number(value))){
-
-        // }
         setError("");
         break;
     }
@@ -291,12 +292,10 @@ const Calculator = () => {
   };
 
   const handleInputValue = (value) => {
-    // console.log(value);
     setKeypadValue(value);
-    // let isValid = validate(value);
+    validate(value);
     let newVal = input;
 
-    // if (isValid) {
     switch (value) {
       case "wti":
         getWTI();
@@ -305,9 +304,10 @@ const Calculator = () => {
       case "*":
       case "/":
       case "+":
-        console.log("hello");
-        if (keypadValue === "wti") newVal = WTIPrice + value;
-        else if (keypadValue === "") newVal = "0" + value;
+        if (keypadValue === "wti") {
+          newVal = WTIPrice + value;
+          setWTIPrice(0);
+        } else if (keypadValue === "") newVal = "0" + value;
         else newVal = input + value;
         setInput(newVal);
         break;
@@ -316,10 +316,18 @@ const Calculator = () => {
         setKeypadValue("");
         setParentheses(0);
         setError("");
+        setWTIPrice(0);
         break;
       case "(":
         setParentheses(parentheses + 1);
-        newVal += value;
+        let findOperation = ["+", "-", "/", "*", "x^y"].find(
+          (element) => element === keypadValue
+        );
+        if (!findOperation) {
+          newVal = newVal.substring(0, input.length - 1) + value;
+        } else {
+          newVal += value;
+        }
         setOpenParenthCount(openParenthCount + 1);
         setInput(newVal);
         break;
@@ -339,17 +347,19 @@ const Calculator = () => {
       case "^":
       case "x^y":
         if (keypadValue === "wti") {
-          newVal = "(" + WTIPrice + ")^";
+          newVal = WTIPrice + "^";
           setWTIPrice(0);
+        } else if (newVal[newVal.length - 1] === ")") {
+          newVal += "^";
         } else if (
           keypadValue === "" ||
           isNaN(Number(newVal[newVal.length - 1]))
         ) {
-          newVal += "(0)^";
+          newVal += "0^";
         } else {
           let digitsStartIndex = findNumberIndex();
           let digits = newVal.substring(digitsStartIndex, newVal.length);
-          let exp = "(" + digits + ")^";
+          let exp = digits + "^";
           newVal = newVal.substring(0, digitsStartIndex) + exp;
         }
 
@@ -358,21 +368,19 @@ const Calculator = () => {
         break;
       case "sqrt":
         if (keypadValue === "wti") {
-          newVal = "(" + WTIPrice + "^(1/2))";
+          newVal = WTIPrice + "^0.5";
           setWTIPrice(0);
-        } else if (
-          newVal.substring(newVal.length - 6, newVal.length - 1) === "(1/2)"
-        ) {
-          newVal += "^(1/2)";
+        } else if (newVal[newVal.length - 1] === ")") {
+          newVal += "^0.5";
         } else if (
           keypadValue === "" ||
           isNaN(Number(newVal[newVal.length - 1]))
         ) {
-          newVal += "(0^(1/2))";
+          newVal += "0^0.5";
         } else {
           let digitsStartIndex = findNumberIndex();
           let digits = newVal.substring(digitsStartIndex, newVal.length);
-          let sqrt = "(" + digits + "^(1/2))";
+          let sqrt = digits + "^0.5";
           newVal = newVal.substring(0, digitsStartIndex - 1) + sqrt;
         }
 
@@ -381,7 +389,6 @@ const Calculator = () => {
         break;
       case "+|-":
         let latestNumber = findNumberIndex();
-        console.log(newVal.substring(0, latestNumber), latestNumber);
         newVal =
           newVal.substring(0, latestNumber) +
           sign +
@@ -396,7 +403,6 @@ const Calculator = () => {
         newVal += value;
         setInput(newVal);
     }
-    // }
   };
 
   return (
