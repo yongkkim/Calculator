@@ -10,3 +10,4 @@ This is a calculator with almost same rules that other calculators from Windows 
 Ruels that the calculator only has are the followings:
 
 1. when you are using exponent ( x ^ y), if you want to set the base or power using [+, - , *, /], then you should enclose them with parenthese, or nearest value from "^" will be chosen as base and power. O (1+2*3/4)^(5+6*7/8), X 1+2*3/4^5+6*7/8
+2. If you press WTI button to get a price, you can also do the calculation with this value follwing operations (should be +,-,/,\*,^)

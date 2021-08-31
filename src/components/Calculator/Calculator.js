@@ -24,31 +24,7 @@ const Calculator = () => {
     }
   }, [input]);
 
-  const findNested = (index) => {
-    if (input[index] === "sqrt" || input[index] === "x^y") {
-      return findNested(index - 1);
-    }
-
-    return index + 1;
-  };
-
-  const findParentheses = () => {
-    //searches backward, from ) to matching (
-    //if there is close parenthese at the end of array, then find first open parenthese
-
-    let closeParentheseCount = 1;
-    let openParenthese;
-    for (let i = input.length - 2; i >= 0 && closeParentheseCount > 0; i--) {
-      if (input[i] === "(") {
-        closeParentheseCount--;
-        if (closeParentheseCount === 0) {
-          openParenthese = findNested(i - 1);
-        }
-      } else if (input[i] === ")") closeParentheseCount++;
-    }
-    return openParenthese;
-  };
-
+  //used oilpriceapi to get price of WTI
   const getWTI = () => {
     let url = "https://api.oilpriceapi.com/v1/prices/latest?by_code=WTI_USD";
     const headers = {
@@ -65,6 +41,8 @@ const Calculator = () => {
       });
   };
 
+  //if there is consecutive *, /, or ^ and parentheses, in order to calculate in order,
+  // save those operations and calculate in order in such cases like 3 * (3+4*5)
   const getTotal = (opSet, currentNum) => {
     let total = 1;
     let lastOp = opSet[opSet.length - 1].operation;
@@ -102,6 +80,7 @@ const Calculator = () => {
     return total;
   };
 
+  // to check if there is nested parenthese.
   const handleOpenParenth = (inputString) => {
     for (let input of inputString) {
       if (input === "(") {
@@ -112,6 +91,7 @@ const Calculator = () => {
     return false;
   };
 
+  // if parenthese is found, get a part that is enclosed with parentheses
   const findParenthPair = (index, inputString) => {
     let count = 0;
 
@@ -122,6 +102,8 @@ const Calculator = () => {
     }
   };
 
+  //exponent is calculated with power that is set with a pair of parentheses, and then
+  // find the close parenthese and set search index of input to next of that close parenthese
   const findCloseParenthIndex = (index, inputString) => {
     let count = 0;
 
@@ -132,6 +114,8 @@ const Calculator = () => {
     }
   };
 
+  //simiar to findCloseParenthIndex, exponent calculation is done and
+  //find the last index of number of power and set the search index of input to next of that last index
   const findPowerLastIndex = (index, inputString) => {
     for (let i = index; i < inputString.length - 1; i++) {
       if (isNaN(Number(inputString[i])) && inputString[i] !== "^") {
@@ -142,6 +126,8 @@ const Calculator = () => {
     return inputString.length - 1;
   };
 
+  //once exponent is used, find a number that is set to power.
+  // if there is a nested exponent, then find it recursively
   const findPower = (index, inputString) => {
     let power = index;
     let nestedPower = 1;
@@ -167,6 +153,7 @@ const Calculator = () => {
     );
   };
 
+  // with user input, check char by char
   const calculate = (inputString) => {
     let secondPriority = [];
     let secondSubResult = 0;
@@ -177,12 +164,14 @@ const Calculator = () => {
     for (let i = 0; i < inputString.length; i++) {
       let char = inputString.charAt(i);
 
+      //if char is number, then get all
       while (i < inputString.length && !isNaN(Number(char))) {
         number = 10 * number + Number(char);
         i++;
         char = inputString.charAt(i);
       }
 
+      //if char is +, -, or ), start mutiplication or division first
       if (["+", "-", ")"].find((element) => element === char)) {
         if (secondPriority.length !== 0) {
           number = getTotal(secondPriority, number);
@@ -191,6 +180,7 @@ const Calculator = () => {
         }
       }
 
+      //char is + or - add number to result
       if (char === "+") {
         result += sign * number;
         number = 0;
@@ -210,6 +200,9 @@ const Calculator = () => {
         secondPriority.push({ number: number, operation: char });
         number = 0;
       } else if (char === "^") {
+        //exponent power can be with a pair of parentheses and only number
+        // if parentheses, get the value in it recursively. If not, get the number
+        // if no power, display error message
         if (inputString[i + 1] === "(") {
           let part = findParenthPair(i + 1, inputString);
           number = calculate(part);
@@ -222,26 +215,34 @@ const Calculator = () => {
           setError("exp1");
         }
       } else if (char === "(") {
+        //if open parenthese, calculate value inside recursively
         let part = findParenthPair(i, inputString);
         number = calculate(part);
 
+        //after calculation is done, if there are values for multiplcation or division,
+        //start it here
         if (secondPriority.length !== 0) {
           number = getTotal(secondPriority, number);
           secondPriority = [];
           secondSubResult = 0;
         }
 
+        //after calculation, update the search index
         if (!handleOpenParenth(part)) i = i + part.indexOf(")") + 1;
         else i = i + part.lastIndexOf(")") + 1;
 
+        //after calculation of a pair of parentheses,
+        //if muliplication or division comes right after, save it to sub-result for later calculation.
         secondSubResult = number;
         result += sign * number;
         number = 0;
       } else if (char === ")") {
+        //resursive calculation is done.
         result += sign * number;
         return result;
       }
     }
+    //handle the unhandled number or *, /, or ^ once finish looping input string to the end.
     if (number != 0 && secondPriority.length !== 0) {
       number = getTotal(secondPriority, number);
       result += sign * number;
@@ -250,6 +251,8 @@ const Calculator = () => {
     return result === 0 ? "0" : result;
   };
 
+  //it is used to set up input
+  //find the recdently added number
   const findNumberIndex = () => {
     let end = input.length - 1;
     for (let i = end; i >= 0; i--) {
@@ -261,8 +264,7 @@ const Calculator = () => {
     return 0;
   };
 
-  const findZero = () => {};
-
+  //Performing a basic validation on input or calculation
   const validate = (value) => {
     let valid = true;
 
@@ -272,13 +274,6 @@ const Calculator = () => {
           setError("divideByZero");
         }
         break;
-      case "x^y":
-      case "sqrt":
-        if (parentheses > 0 && findParentheses() === -1) {
-          setError("sqrtExp1");
-        }
-        break;
-      //
       case "=":
         if (parentheses !== 0) {
           setError("calculate1");
@@ -293,12 +288,17 @@ const Calculator = () => {
     return valid;
   };
 
+  //handle input
+  //other than making validation more complex, find the invalid input and remove or replace
   const handleInputValue = (value) => {
+    //set value that user input
+    //since it doesn't update it right away, we can check the recent input value before the current one.
     setKeypadValue(value);
     validate(value);
     let newVal = input;
 
     switch (value) {
+      //get WTI value
       case "wti":
         getWTI();
         break;
@@ -399,7 +399,9 @@ const Calculator = () => {
         setInput(newVal);
         break;
       case "=":
-        setResult(calculate(input));
+        let trimmed = input.trim();
+        setInput(trimmed);
+        setResult(calculate(trimmed));
         break;
       default:
         newVal += value;

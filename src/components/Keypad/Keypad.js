@@ -33,13 +33,13 @@ const Keypad = ({ handleInputValue, openTest, setOpenTest }) => {
 
       <Button handleInputValue={handleInputValue} label="=" value="=" />
       <Button handleInputValue={handleInputValue} label="WTI" value="wti" />
-      <TestButton
+      {/* <TestButton
         handleInputValue={handleInputValue}
         openTest={openTest}
         setOpenTest={setOpenTest}
         label="Test"
         value="test"
-      />
+      /> */}
     </div>
   );
 };
